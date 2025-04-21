@@ -74,5 +74,6 @@ ehthumbs.db
 Thumbs.db
 
 # Specific project ignores
-data/
+data/*
+!data/.gitkeep
 output/distillated_student_KL/ 
