@@ -1,0 +1,51 @@
+[2025-04-21 08:13:57,622] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+重置第 0 层的参数...
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: GPT2Attention(
+  (c_attn): Conv1D(nf=2304, nx=768)
+  (c_proj): Conv1D(nf=768, nx=768)
+  (attn_dropout): Dropout(p=0.1, inplace=False)
+  (resid_dropout): Dropout(p=0.1, inplace=False)
+)
+重置权重: Conv1D(nf=2304, nx=768)
+重置偏置: Conv1D(nf=2304, nx=768)
+重置权重: Conv1D(nf=768, nx=768)
+重置偏置: Conv1D(nf=768, nx=768)
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置权重: Conv1D(nf=3072, nx=768)
+重置偏置: Conv1D(nf=3072, nx=768)
+重置权重: Conv1D(nf=768, nx=3072)
+重置偏置: Conv1D(nf=768, nx=3072)
+teacher model -- Check !
+student model -- Check!
+There are 6 critics and optimizers
+Critics -- Check!
+\n--- Model Precision Check (After DDP Wrapping) ---
+Command line args.dtype: torch.float16
+Student model parameter dtype (e.g., embeddings): torch.float32
+Teacher model parameter dtype (e.g., embeddings): torch.float32
+Could not check critic parameter dtype: 'critic' object has no attribute 'layer_1'
+-----------------------------------------------\n
+Dataset -- Check!
+Using a subset of the training data: 10000 samples.
+Creating test set from the last 10000 samples of the 'train' split.
+Start training...
+CUDA_VISIBLE_DEVICES: None
+Available GPUs: 1
+Evaluating Student score
+`loss_type=None` was set in the config but it is unrecognised.Using the default loss: `ForCausalLMLoss`.
+Student model Perplexity on validation set: 6096.10009765625
+--- Input Data Check (Epoch 0, Step 0) ---
+Input batch ('input_ids') dtype: torch.int64
+------------------------------------------
+/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/autograd/graph.py:823: UserWarning: Attempting to run cuBLAS, but there was no current CUDA context! Attempting to set the primary context... (Triggered internally at /pytorch/aten/src/ATen/cuda/CublasHandlePool.cpp:180.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+ Epoch [0/1] | Step [0/208] | Student Loss: 43.597 | C1L: 0.283, C2L: -3.665, C3L: -9.770, C4L: -6.426, C5L: -9.115, C6L: -0.672, | Kl loss: 4677.9995| Time: 1.8843
+Student Perplexity on validation set: 5587.39892578125
+Student model saved to ./output/distillated_student_KL/student_model_well-trained00distill_step
+ Epoch [0/1] | Step [50/208] | Student Loss: 119.132 | C1L: -2.414, C2L: -13.490, C3L: -20.983, C4L: -24.601, C5L: -24.039, C6L: -8.994, | Kl loss: 3530.8887| Time: 1.1403
+ Epoch [0/1] | Step [100/208] | Student Loss: 62.082 | C1L: -2.459, C2L: -8.585, C3L: -11.275, C4L: -13.063, C5L: -12.770, C6L: -9.532, | Kl loss: 3417.7456| Time: 1.1353
+ Epoch [0/1] | Step [150/208] | Student Loss: 36.320 | C1L: -2.518, C2L: -6.224, C3L: -6.820, C4L: -7.785, C5L: -7.829, C6L: -9.334, | Kl loss: 3302.0046| Time: 1.1334
+ Epoch [0/1] | Step [200/208] | Student Loss: 19.843 | C1L: -2.521, C2L: -4.778, C3L: -4.196, C4L: -4.583, C5L: -5.164, C6L: -8.648, | Kl loss: 3225.2573| Time: 1.1337

@@ -1,0 +1,70 @@
+[2025-04-21 09:10:41,273] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+重置第 0 层的参数...
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: GPT2Attention(
+  (c_attn): Conv1D(nf=2304, nx=768)
+  (c_proj): Conv1D(nf=768, nx=768)
+  (attn_dropout): Dropout(p=0.1, inplace=False)
+  (resid_dropout): Dropout(p=0.1, inplace=False)
+)
+重置权重: Conv1D(nf=2304, nx=768)
+重置偏置: Conv1D(nf=2304, nx=768)
+重置权重: Conv1D(nf=768, nx=768)
+重置偏置: Conv1D(nf=768, nx=768)
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置权重: Conv1D(nf=3072, nx=768)
+重置偏置: Conv1D(nf=3072, nx=768)
+重置权重: Conv1D(nf=768, nx=3072)
+重置偏置: Conv1D(nf=768, nx=3072)
+teacher model -- Check !
+student model -- Check!
+There are 6 critics and optimizers
+Critics -- Check!
+
+--- Model Precision Check (After DDP Wrapping) ---
+Command line args.dtype: torch.float16
+Student model parameter dtype (e.g., embeddings): torch.float32
+Teacher model parameter dtype (e.g., embeddings): torch.float32
+Could not check critic parameter dtype: 'critic' object has no attribute 'layer_1'
+-----------------------------------------------
+
+Dataset -- Check!
+Using a subset of the training data: 10000 samples.
+Creating test set from the last 10000 samples of the 'train' split.
+Start training...
+CUDA_VISIBLE_DEVICES: None
+Available GPUs: 1
+Evaluating Student score
+`loss_type=None` was set in the config but it is unrecognised.Using the default loss: `ForCausalLMLoss`.
+Student model Perplexity on validation set: 5990.62109375
+--- Input Data Check (Epoch 0, Step 0) ---
+Input batch ('input_ids') dtype: torch.int64
+------------------------------------------
+/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/autograd/graph.py:823: UserWarning: Attempting to run cuBLAS, but there was no current CUDA context! Attempting to set the primary context... (Triggered internally at /pytorch/aten/src/ATen/cuda/CublasHandlePool.cpp:180.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+ Epoch [0/1] | Step [0/208] | Student Loss: 45.642 | C1L: 0.298, C2L: -3.709, C3L: -7.563, C4L: -9.647, C5L: -10.366, C6L: -1.116, | Kl loss: 4635.2949| Time: 2.0190
+Student Perplexity on validation set: 5479.06787109375
+Student model saved to ./output/distillated_student_KL/student_model_well-trained00distill_step
+ Epoch [0/1] | Step [50/208] | Student Loss: 114.644 | C1L: -2.399, C2L: -13.074, C3L: -20.424, C4L: -23.816, C5L: -23.183, C6L: -8.984, | Kl loss: 3526.4590| Time: 1.1360
+ Epoch [0/1] | Step [100/208] | Student Loss: 59.607 | C1L: -2.455, C2L: -8.384, C3L: -10.871, C4L: -12.549, C5L: -12.158, C6L: -9.397, | Kl loss: 3411.9478| Time: 1.1348
+ Epoch [0/1] | Step [150/208] | Student Loss: 34.725 | C1L: -2.498, C2L: -6.138, C3L: -6.653, C4L: -7.440, C5L: -7.478, C6L: -9.278, | Kl loss: 3271.1602| Time: 1.1391
+ Epoch [0/1] | Step [200/208] | Student Loss: 18.344 | C1L: -2.531, C2L: -4.666, C3L: -3.914, C4L: -4.288, C5L: -4.895, C6L: -8.466, | Kl loss: 3178.7812| Time: 1.1345
+Perplexity on validation set: 3862.940185546875
+Student model saved to ./output/distillated_student_KL/student_model_well-trained0distill_step
+Training completed.
+Generating final t-SNE plot...
+/root/miniconda3/envs/distillation/lib/python3.10/site-packages/sklearn/manifold/_t_sne.py:1164: FutureWarning: 'n_iter' was renamed to 'max_iter' in version 1.5 and will be removed in 1.7.
+  warnings.warn(
+/root/miniconda3/envs/distillation/lib/python3.10/site-packages/sklearn/manifold/_t_sne.py:1164: FutureWarning: 'n_iter' was renamed to 'max_iter' in version 1.5 and will be removed in 1.7.
+  warnings.warn(
+/root/miniconda3/envs/distillation/lib/python3.10/site-packages/sklearn/manifold/_t_sne.py:1164: FutureWarning: 'n_iter' was renamed to 'max_iter' in version 1.5 and will be removed in 1.7.
+  warnings.warn(
+/root/miniconda3/envs/distillation/lib/python3.10/site-packages/sklearn/manifold/_t_sne.py:1164: FutureWarning: 'n_iter' was renamed to 'max_iter' in version 1.5 and will be removed in 1.7.
+  warnings.warn(
+/root/miniconda3/envs/distillation/lib/python3.10/site-packages/sklearn/manifold/_t_sne.py:1164: FutureWarning: 'n_iter' was renamed to 'max_iter' in version 1.5 and will be removed in 1.7.
+  warnings.warn(
+/root/miniconda3/envs/distillation/lib/python3.10/site-packages/sklearn/manifold/_t_sne.py:1164: FutureWarning: 'n_iter' was renamed to 'max_iter' in version 1.5 and will be removed in 1.7.
+  warnings.warn(
+t-SNE plot saved to ./output/fig/final_tsne_plot.png

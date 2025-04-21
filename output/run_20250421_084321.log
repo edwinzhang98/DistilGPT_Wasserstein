@@ -1,0 +1,108 @@
+[2025-04-21 08:43:25,087] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+重置第 0 层的参数...
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: GPT2Attention(
+  (c_attn): Conv1D(nf=2304, nx=768)
+  (c_proj): Conv1D(nf=768, nx=768)
+  (attn_dropout): Dropout(p=0.1, inplace=False)
+  (resid_dropout): Dropout(p=0.1, inplace=False)
+)
+重置权重: Conv1D(nf=2304, nx=768)
+重置偏置: Conv1D(nf=2304, nx=768)
+重置权重: Conv1D(nf=768, nx=768)
+重置偏置: Conv1D(nf=768, nx=768)
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置权重: Conv1D(nf=3072, nx=768)
+重置偏置: Conv1D(nf=3072, nx=768)
+重置权重: Conv1D(nf=768, nx=3072)
+重置偏置: Conv1D(nf=768, nx=3072)
+teacher model -- Check !
+student model -- Check!
+There are 6 critics and optimizers
+Critics -- Check!
+[2025-04-21 08:44:41,448] [INFO] [logging.py:107:log_dist] [Rank -1] DeepSpeed info: version=0.16.7, git-hash=unknown, git-branch=unknown
+[2025-04-21 08:44:41,448] [INFO] [comm.py:669:init_distributed] cdb=None
+[2025-04-21 08:44:41,449] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 1
+[2025-04-21 08:44:41,551] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
+Using /root/.cache/torch_extensions/py310_cu124 as PyTorch extensions root...
+Creating extension directory /root/.cache/torch_extensions/py310_cu124/fused_adam...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /root/.cache/torch_extensions/py310_cu124/fused_adam/build.ninja...
+/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/utils/cpp_extension.py:2059: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
+If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
+  warnings.warn(
+Building extension module fused_adam...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+[1/3] /usr/local/cuda/bin/nvcc --generate-dependencies-with-compile --dependency-output multi_tensor_adam.cuda.o.d -DTORCH_EXTENSION_NAME=fused_adam -DTORCH_API_INCLUDE_EXTENSION_H -DPYBIND11_COMPILER_TYPE=\"_gcc\" -DPYBIND11_STDLIB=\"_libstdcpp\" -DPYBIND11_BUILD_ABI=\"_cxxabi1011\" -I/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/ops/csrc/includes -I/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/ops/csrc/adam -isystem /root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/include -isystem /root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/include/torch/csrc/api/include -isystem /root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/include/TH -isystem /root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/include/THC -isystem /usr/local/cuda/include -isystem /root/miniconda3/envs/distillation/include/python3.10 -D_GLIBCXX_USE_CXX11_ABI=0 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr -gencode=arch=compute_80,code=compute_80 -gencode=arch=compute_80,code=sm_80 --compiler-options '-fPIC' -O3 -DVERSION_GE_1_1 -DVERSION_GE_1_3 -DVERSION_GE_1_5 -lineinfo --use_fast_math -gencode=arch=compute_80,code=sm_80 -gencode=arch=compute_80,code=compute_80 -DBF16_AVAILABLE -U__CUDA_NO_BFLOAT16_OPERATORS__ -U__CUDA_NO_BFLOAT162_OPERATORS__ -U__CUDA_NO_BFLOAT16_CONVERSIONS__ -std=c++17 -c /root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/ops/csrc/adam/multi_tensor_adam.cu -o multi_tensor_adam.cuda.o 
+[2/3] c++ -MMD -MF fused_adam_frontend.o.d -DTORCH_EXTENSION_NAME=fused_adam -DTORCH_API_INCLUDE_EXTENSION_H -DPYBIND11_COMPILER_TYPE=\"_gcc\" -DPYBIND11_STDLIB=\"_libstdcpp\" -DPYBIND11_BUILD_ABI=\"_cxxabi1011\" -I/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/ops/csrc/includes -I/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/ops/csrc/adam -isystem /root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/include -isystem /root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/include/torch/csrc/api/include -isystem /root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/include/TH -isystem /root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/include/THC -isystem /usr/local/cuda/include -isystem /root/miniconda3/envs/distillation/include/python3.10 -D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -std=c++17 -O3 -std=c++17 -g -Wno-reorder -DVERSION_GE_1_1 -DVERSION_GE_1_3 -DVERSION_GE_1_5 -DBF16_AVAILABLE -c /root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/ops/csrc/adam/fused_adam_frontend.cpp -o fused_adam_frontend.o 
+[3/3] c++ fused_adam_frontend.o multi_tensor_adam.cuda.o -shared -L/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/lib -lc10 -lc10_cuda -ltorch_cpu -ltorch_cuda -ltorch -ltorch_python -L/usr/local/cuda/lib64 -lcudart -o fused_adam.so
+Loading extension module fused_adam...
+Time to load fused_adam op: 25.752511978149414 seconds
+[2025-04-21 08:45:07,306] [INFO] [logging.py:107:log_dist] [Rank 0] Using DeepSpeed Optimizer param name adamw as basic optimizer
+[2025-04-21 08:45:07,306] [INFO] [logging.py:107:log_dist] [Rank 0] Removing param_group that has no 'params' in the basic Optimizer
+[2025-04-21 08:45:07,310] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Basic Optimizer = FusedAdam
+[2025-04-21 08:45:07,310] [INFO] [logging.py:107:log_dist] [Rank 0] Creating BF16 optimizer
+[2025-04-21 08:45:07,731] [INFO] [utils.py:781:see_memory_usage] begin bf16_optimizer
+[2025-04-21 08:45:07,733] [INFO] [utils.py:782:see_memory_usage] MA 1.13 GB         Max_MA 1.35 GB         CA 1.79 GB         Max_CA 2 GB 
+[2025-04-21 08:45:07,733] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 44.92 GB, percent = 4.5%
+[2025-04-21 08:45:08,027] [INFO] [utils.py:781:see_memory_usage] before initializing group 0
+[2025-04-21 08:45:08,027] [INFO] [utils.py:782:see_memory_usage] MA 1.13 GB         Max_MA 1.13 GB         CA 1.79 GB         Max_CA 2 GB 
+[2025-04-21 08:45:08,028] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 44.92 GB, percent = 4.5%
+[2025-04-21 08:45:08,240] [INFO] [utils.py:781:see_memory_usage] after initializing group 0
+[2025-04-21 08:45:08,241] [INFO] [utils.py:782:see_memory_usage] MA 1.74 GB         Max_MA 1.74 GB         CA 2.4 GB         Max_CA 2 GB 
+[2025-04-21 08:45:08,241] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 44.92 GB, percent = 4.5%
+[2025-04-21 08:45:08,444] [INFO] [utils.py:781:see_memory_usage] end bf16_ optimizer
+[2025-04-21 08:45:08,445] [INFO] [utils.py:782:see_memory_usage] MA 1.74 GB         Max_MA 1.74 GB         CA 2.4 GB         Max_CA 2 GB 
+[2025-04-21 08:45:08,445] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 44.92 GB, percent = 4.5%
+[2025-04-21 08:45:08,446] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Final Optimizer = BF16_Optimizer
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/root/autodl-tmp/WD_Distillation/./try_sh.py", line 899, in <module>
+[rank0]:     main()
+[rank0]:   File "/root/autodl-tmp/WD_Distillation/./try_sh.py", line 738, in main
+[rank0]:     model_engine, student_optimizer, _, student_lr_scheduler = deepspeed.initialize(
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/__init__.py", line 193, in initialize
+[rank0]:     engine = DeepSpeedEngine(args=args,
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/runtime/engine.py", line 327, in __init__
+[rank0]:     self._configure_lr_scheduler()
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/runtime/engine.py", line 1066, in _configure_lr_scheduler
+[rank0]:     lr_scheduler = self._scheduler_from_config(self.optimizer)
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/runtime/engine.py", line 1113, in _scheduler_from_config
+[rank0]:     instantiated_scheduler = scheduler(optimizer, **scheduler_params)
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/runtime/lr_schedules.py", line 667, in __init__
+[rank0]:     self.delta_lrs = [big - small for big, small in zip(self.max_lrs, self.min_lrs)]
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/runtime/lr_schedules.py", line 667, in <listcomp>
+[rank0]:     self.delta_lrs = [big - small for big, small in zip(self.max_lrs, self.min_lrs)]
+[rank0]: TypeError: unsupported operand type(s) for -: 'str' and 'str'
+[rank0]:[W421 08:45:08.031039575 ProcessGroupNCCL.cpp:1496] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+E0421 08:45:10.243000 12049 site-packages/torch/distributed/elastic/multiprocessing/api.py:869] failed (exitcode: 1) local_rank: 0 (pid: 12077) of binary: /root/miniconda3/envs/distillation/bin/python
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/distillation/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/run.py", line 918, in main
+    run(args)
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/run.py", line 909, in run
+    elastic_launch(
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 138, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 269, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+./try_sh.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-04-21_08:45:10
+  host      : autodl-container-34fb1182ae-64413be3
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 12077)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

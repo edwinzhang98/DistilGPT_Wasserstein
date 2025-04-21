@@ -1,0 +1,78 @@
+[2025-04-21 08:46:58,678] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+重置第 0 层的参数...
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: GPT2Attention(
+  (c_attn): Conv1D(nf=2304, nx=768)
+  (c_proj): Conv1D(nf=768, nx=768)
+  (attn_dropout): Dropout(p=0.1, inplace=False)
+  (resid_dropout): Dropout(p=0.1, inplace=False)
+)
+重置权重: Conv1D(nf=2304, nx=768)
+重置偏置: Conv1D(nf=2304, nx=768)
+重置权重: Conv1D(nf=768, nx=768)
+重置偏置: Conv1D(nf=768, nx=768)
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置权重: Conv1D(nf=3072, nx=768)
+重置偏置: Conv1D(nf=3072, nx=768)
+重置权重: Conv1D(nf=768, nx=3072)
+重置偏置: Conv1D(nf=768, nx=3072)
+teacher model -- Check !
+student model -- Check!
+There are 6 critics and optimizers
+Critics -- Check!
+
+--- Model Precision Check (After DDP Wrapping) ---
+Command line args.dtype: torch.float16
+Student model parameter dtype (e.g., embeddings): torch.float32
+Teacher model parameter dtype (e.g., embeddings): torch.float32
+Could not check critic parameter dtype: 'critic' object has no attribute 'layer_1'
+-----------------------------------------------
+
+Dataset -- Check!
+Using a subset of the training data: 10000 samples.
+Creating test set from the last 10000 samples of the 'train' split.
+Start training...
+CUDA_VISIBLE_DEVICES: None
+Available GPUs: 1
+Evaluating Student score
+`loss_type=None` was set in the config but it is unrecognised.Using the default loss: `ForCausalLMLoss`.
+Student model Perplexity on validation set: 6113.05859375
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/root/autodl-tmp/WD_Distillation/./try_sh.py", line 900, in <module>
+[rank0]:     main()
+[rank0]:   File "/root/autodl-tmp/WD_Distillation/./try_sh.py", line 856, in main
+[rank0]:     student_scheduler, # Pass manually created scheduler
+[rank0]: NameError: name 'student_scheduler' is not defined
+[rank0]:[W421 08:50:37.133463416 ProcessGroupNCCL.cpp:1496] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+E0421 08:50:38.271000 12848 site-packages/torch/distributed/elastic/multiprocessing/api.py:869] failed (exitcode: 1) local_rank: 0 (pid: 12876) of binary: /root/miniconda3/envs/distillation/bin/python
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/distillation/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/run.py", line 918, in main
+    run(args)
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/run.py", line 909, in run
+    elastic_launch(
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 138, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 269, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+./try_sh.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-04-21_08:50:38
+  host      : autodl-container-34fb1182ae-64413be3
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 12876)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

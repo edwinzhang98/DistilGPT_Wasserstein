@@ -1,0 +1,72 @@
+[2025-04-21 08:41:05,718] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+重置第 0 层的参数...
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: GPT2Attention(
+  (c_attn): Conv1D(nf=2304, nx=768)
+  (c_proj): Conv1D(nf=768, nx=768)
+  (attn_dropout): Dropout(p=0.1, inplace=False)
+  (resid_dropout): Dropout(p=0.1, inplace=False)
+)
+重置权重: Conv1D(nf=2304, nx=768)
+重置偏置: Conv1D(nf=2304, nx=768)
+重置权重: Conv1D(nf=768, nx=768)
+重置偏置: Conv1D(nf=768, nx=768)
+重置权重: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置偏置: LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+重置权重: Conv1D(nf=3072, nx=768)
+重置偏置: Conv1D(nf=3072, nx=768)
+重置权重: Conv1D(nf=768, nx=3072)
+重置偏置: Conv1D(nf=768, nx=3072)
+teacher model -- Check !
+student model -- Check!
+There are 6 critics and optimizers
+Critics -- Check!
+[2025-04-21 08:42:21,701] [INFO] [logging.py:107:log_dist] [Rank -1] DeepSpeed info: version=0.16.7, git-hash=unknown, git-branch=unknown
+[2025-04-21 08:42:21,702] [INFO] [comm.py:669:init_distributed] cdb=None
+[2025-04-21 08:42:21,703] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 1
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/root/autodl-tmp/WD_Distillation/./try_sh.py", line 899, in <module>
+[rank0]:     main()
+[rank0]:   File "/root/autodl-tmp/WD_Distillation/./try_sh.py", line 738, in main
+[rank0]:     model_engine, student_optimizer, _, student_lr_scheduler = deepspeed.initialize(
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/__init__.py", line 179, in initialize
+[rank0]:     config_class = DeepSpeedConfig(config, mpu, mesh_device=mesh_device)
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/runtime/config.py", line 800, in __init__
+[rank0]:     self._configure_train_batch_size()
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/runtime/config.py", line 984, in _configure_train_batch_size
+[rank0]:     self._set_batch_related_parameters()
+[rank0]:   File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/deepspeed/runtime/config.py", line 980, in _set_batch_related_parameters
+[rank0]:     assert False, \
+[rank0]: AssertionError: Either train_batch_size or train_micro_batch_size_per_gpu needs to be provided
+[rank0]:[W421 08:42:22.999463767 ProcessGroupNCCL.cpp:1496] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+E0421 08:42:24.167000 11634 site-packages/torch/distributed/elastic/multiprocessing/api.py:869] failed (exitcode: 1) local_rank: 0 (pid: 11662) of binary: /root/miniconda3/envs/distillation/bin/python
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/distillation/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/run.py", line 918, in main
+    run(args)
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/run.py", line 909, in run
+    elastic_launch(
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 138, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 269, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+./try_sh.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-04-21_08:42:24
+  host      : autodl-container-34fb1182ae-64413be3
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 11662)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

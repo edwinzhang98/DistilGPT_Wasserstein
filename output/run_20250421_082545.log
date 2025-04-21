@@ -1,0 +1,34 @@
+  File "/root/autodl-tmp/WD_Distillation/./try_sh.py", line 509
+    save_tag = f'epoch{epoch}_step{student_model.global_steps if hasattr(student_model, 'global_steps') else step}_{CFG.distill_step}'
+                                                                                         ^^^^^^^^^^^^
+SyntaxError: f-string: unmatched '('
+E0421 08:25:47.262000 10268 site-packages/torch/distributed/elastic/multiprocessing/api.py:869] failed (exitcode: 1) local_rank: 0 (pid: 10299) of binary: /root/miniconda3/envs/distillation/bin/python
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/distillation/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/run.py", line 918, in main
+    run(args)
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/run.py", line 909, in run
+    elastic_launch(
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 138, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/root/miniconda3/envs/distillation/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 269, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+./try_sh.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-04-21_08:25:47
+  host      : autodl-container-34fb1182ae-64413be3
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 10299)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
