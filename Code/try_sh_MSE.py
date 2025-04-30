@@ -31,11 +31,13 @@ def get_critics_and_optimizers(n, dim, device, lr=1e-4):
     
     for i in range(n):
         # 定义 Critic
+        # Define Critic
         new_critic = critic(dim)
         new_critic = new_critic.to(device)
         critics.append(new_critic)
         
         # 定义对应的 Optimizer
+        # Define the corresponding Optimizer
         optimizer = optim.RMSprop(new_critic.parameters(), lr=lr)
         scheduler = CosineAnnealingLR(optimizer, T_max=1000)
         optimizers.append(optimizer)
@@ -51,18 +53,22 @@ def token_level_distill(args, model_data, student_model, teacher_model, critics,
     for _ in range(args.max_input_len - model_data["input_ids"].shape[1]):
 
         # 前向传播：教师和学生模型
+        # Forward pass: Teacher and student models
         with torch.no_grad():
             teacher_output = teacher_model(input_ids=generated_ids, attention_mask=attention_mask, output_hidden_states=True)
         student_output = student_model(input_ids=generated_ids, attention_mask=attention_mask, output_hidden_states=True)
 
         #使用教师logits
+        # Use teacher logits
         teacher_logits = teacher_output.logits
         next_token_logits = teacher_logits[:,-1,:]
         # 学生模型的 logits
+        # Student model's logits
         student_logits = student_output.logits
         student_next_token_logits = student_logits[:, -1, :]
                         
         # 计算 KL loss
+        # Calculate KL loss
         teacher_probs = F.softmax(next_token_logits, dim=-1)
         student_probs = F.log_softmax(student_next_token_logits, dim=-1)
         kl_loss = F.kl_div(student_probs, teacher_probs, reduction='batchmean')
@@ -70,14 +76,17 @@ def token_level_distill(args, model_data, student_model, teacher_model, critics,
         # Top-p + Temperature
         next_token = top_p_sampling(next_token_logits, top_p=0.9, temperature=0.8)
         # 将生成的 token 添加到输入序列
+        # Add the generated token to the input sequence
         next_token = next_token.unsqueeze(1)
         generated_ids = torch.cat([generated_ids, next_token], dim=1)
         #with torch.no_grad():
             # 更新 attention_mask，确保新增的 token 被关注
+            # Update attention_mask to ensure the new token is attended to
         new_attention_mask = torch.ones((attention_mask.size(0), 1), device=attention_mask.device)
         attention_mask = torch.cat([attention_mask, new_attention_mask], dim=1)
 
         # Critic 蒸馏步骤
+        # Critic distillation step
         critic_loss, student_loss = critic_step(
                                 cur_stu_ly=student_layer,
                                 cur_tea_ly=teacher_layer,
@@ -86,12 +95,14 @@ def token_level_distill(args, model_data, student_model, teacher_model, critics,
                                 target=teacher_output,
                                 critics=critics,
                                 critic_optimizer=critic_optimizer,
-                                student_optimizer=student_optimizer,  # 学生模型的 optimizer 放在最后
+                                student_optimizer=student_optimizer,  # 学生模型的 optimizer 放在最后 # Put student model's optimizer last
                                 arg=args
                                 )
         # 将 KL loss 加入到学生模型的 loss 中
+        # Add KL loss to the student model's loss
         total_loss = student_loss +  kl_loss
         # 反向传播和优化学生模型
+        # Backpropagate and optimize the student model
         student_optimizer.zero_grad()
         total_loss.backward()
         student_optimizer.step()
@@ -100,6 +111,7 @@ def token_level_distill(args, model_data, student_model, teacher_model, critics,
         
 def distill_step(args, student_model, student_optimizer, teacher_model, critic_list, optimizer_list, input_ids, attention_mask):
     # 前向传播：教师和学生模型
+    # Forward pass: Teacher and student models
     with torch.no_grad():
         teacher_output = teacher_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
     student_output = student_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
@@ -108,16 +120,19 @@ def distill_step(args, student_model, student_optimizer, teacher_model, critic_l
     student_states = student_output.hidden_states
     
     # 使用教师 logits，添加 temperature
+    # Use teacher logits, add temperature
     temperature = 1.2
     teacher_logits = teacher_output.logits / temperature
     student_logits = student_output.logits / temperature
 
     # 计算 KL loss
+    # Calculate KL loss
     teacher_probs = F.softmax(teacher_logits, dim=-1)
     student_probs = F.log_softmax(student_logits, dim=-1)
     kl_loss = F.kl_div(student_probs, teacher_probs, reduction='batchmean') * (temperature ** 2)
 
     # Critic 蒸馏步骤
+    # Critic distillation step
     critic_loss_container = []
     total_stu_loss = 0
     for student_emb, teacher_emb, critic, optimizer_critic in zip(student_states, teacher_states, critic_list, optimizer_list):
@@ -127,9 +142,11 @@ def distill_step(args, student_model, student_optimizer, teacher_model, critic_l
                         
     
     # 将 KL loss 加入到学生模型的 loss 中
+    # Add KL loss to the student model's loss
     total_loss = student_loss + kl_loss
 
     # 反向传播和优化学生模型
+    # Backpropagate and optimize the student model
     student_optimizer.zero_grad()
     total_loss.backward()
     student_optimizer.step()
@@ -138,6 +155,7 @@ def distill_step(args, student_model, student_optimizer, teacher_model, critic_l
 
 def kl_MSE_step(args, student_model, student_optimizer, teacher_model, critic_list, optimizer_list, input_ids, attention_mask):
     # 前向传播：教师和学生模型
+    # Forward pass: Teacher and student models
     with torch.no_grad():
         teacher_output = teacher_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
     student_output = student_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
@@ -146,11 +164,13 @@ def kl_MSE_step(args, student_model, student_optimizer, teacher_model, critic_li
     student_states = student_output.hidden_states
     
     # 使用教师 logits，添加 temperature
+    # Use teacher logits, add temperature
     temperature = 1.2
     teacher_logits = teacher_output.logits / temperature
     student_logits = student_output.logits / temperature
 
     # 计算 KL loss
+    # Calculate KL loss
     teacher_probs = F.softmax(teacher_logits, dim=-1)
     student_probs = F.log_softmax(student_logits, dim=-1)
     kl_loss = F.kl_div(student_probs, teacher_probs, reduction='batchmean') * (temperature ** 2)
@@ -163,6 +183,7 @@ def kl_MSE_step(args, student_model, student_optimizer, teacher_model, critic_li
     total_loss = mse + kl_loss
         
     # 反向传播和优化学生模型
+    # Backpropagate and optimize the student model
     student_optimizer.zero_grad()
     total_loss.backward()
     student_optimizer.step()
@@ -193,11 +214,13 @@ def gradient_penalty(critic, real_data, fake_data):
 
 def critic_step(student_emb, teacher_emb, critic, critic_optimizer, arg):        
     # 开始训练Critic
+    # Start training the Critic
     for _ in range(arg.critic_time):
         teacher_score = critic(teacher_emb)
         student_output_detached = student_emb.detach()
         student_score_critic = critic(student_output_detached)
         # 判别器的损失：最大化教师评分，最小化学生评分
+        # Discriminator loss: Maximize teacher score, minimize student score
         critic_loss = -(torch.mean(teacher_score) - torch.mean(student_score_critic))
         gp = gradient_penalty(critic, teacher_emb, student_output_detached)
         critic_loss += arg.lambda_gp * gp
@@ -205,9 +228,11 @@ def critic_step(student_emb, teacher_emb, critic, critic_optimizer, arg):
         critic_loss.backward()
         critic_optimizer.step()
     # 重新计算 student_score，这次不分离计算图
+    # Recalculate student_score, this time without detaching the computation graph
     student_score = critic(student_emb)
 
     # 学生模型的损失：最小化学生评分
+    # Student model loss: Minimize student score
     student_loss = -torch.mean(student_score)
     
     return critic_loss.item(), student_loss
@@ -217,22 +242,27 @@ def critic_step(student_emb, teacher_emb, critic, critic_optimizer, arg):
 def train_step(schedulars, student_scheduler, test_dataset, data_loader, student_model, teacher_model, tokenizer, critics, optimizers, student_optimizer, num_epochs, device, args):
     # Critic -> compute Wasserstein Distance
     # 设置训练模式
+    # Set training mode
     teacher_model.eval()
     student_model.train()
     for each_critic in critics:
         each_critic.train()    
         
     # 得到需要蒸馏的总层数
+    # Get the total number of layers to be distilled
     n_layers = student_model.config.n_layer
     n_layers_teacher = teacher_model.config.n_layer
     
     # 开始训练：逐层进行蒸馏
+    # Start training: Distill layer by layer
         
     for epoch in range(num_epochs):              
         
         for step, batch in enumerate(data_loader):
             # 初始输入 (复制一份作为生成用，避免修改原数据)
+            # Initial input (copy one for generation to avoid modifying original data)
             # 数据移至 GPU，遍历数据批次
+            # Move data to GPU, iterate through data batches
             #model_data, no_model_data, gen_data = batch
             model_data = batch
             input_ids = model_data["input_ids"].to(device)
@@ -240,9 +270,11 @@ def train_step(schedulars, student_scheduler, test_dataset, data_loader, student
             generated_ids = input_ids.clone()
                 
             # 自回归生成/不自回归
+            # Autoregressive generation / Non-autoregressive
             time1 = time.time()
             total_loss, student_loss, critic_loss_container, kl_loss = kl_MSE_step(args, student_model, student_optimizer, teacher_model, critics, optimizers, input_ids, attention_mask)
             # 每 20 步打印一次损失
+            # Print loss every 50 steps
             if step % 50 == 0:
                 time2 = time.time()
                 epsilon = time2 - time1
@@ -276,6 +308,7 @@ def train_step(schedulars, student_scheduler, test_dataset, data_loader, student
 
 def main():
     # 初始化分布式进程组
+    # Initialize distributed process group
     dist.init_process_group(backend='nccl', init_method='env://')
     args = get_args()
     

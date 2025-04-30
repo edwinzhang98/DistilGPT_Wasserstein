@@ -1,0 +1,17 @@
+# Essential libraries for DL and NLP
+torch
+transformers
+
+# For distributed training and optimization
+deepspeed
+
+# Data handling and numerical operations
+datasets
+numpy
+scipy
+
+# Utilities
+tqdm
+
+# Add other specific dependencies your project uses below
+# e.g., matplotlib, scikit-learn, pandas 

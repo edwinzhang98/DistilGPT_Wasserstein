@@ -69,29 +69,30 @@ import torch.nn.functional as F
 
 def compute_topk_kl_loss(teacher_logits, student_logits, temperature=2, top_k=10):
     """
-    只对教师模型前 top_k 个高概率 token 计算KL散度，
-    并且在 top_k 内部重新归一化分布再计算 KL。
+    Calculate KL divergence only for the top_k high-probability tokens of the teacher model,
+    and recalculate KL after renormalizing the distribution within top_k.
     """
 
-    # 1. 计算教师、学生在整个词表上的 softmax 分布
+    # 1. Calculate softmax distributions for teacher and student over the entire vocabulary
     teacher_probs = F.softmax(teacher_logits / temperature, dim=-1)   # [batch_size, seq_len, vocab_size]
     student_probs = F.softmax(student_logits / temperature, dim=-1)
 
-    # 2. 获取教师模型每个位置概率最高的前 top_k 个 token
+    # 2. Get the top_k tokens with the highest probability at each position for the teacher model
     #    以及相应的概率分布
     #    shape: [batch_size, seq_len, top_k], [batch_size, seq_len, top_k]
     teacher_topk_probs, teacher_topk_indices = teacher_probs.topk(top_k, dim=-1)
 
-    # 3. 对教师 top_k 概率做归一化，使这 top_k 个值之和为 1
+    # 3. Normalize the teacher's top_k probabilities so that the sum of these top_k values is 1
     #    这样就获得了教师在 top_k 子集上的分布
+    #    This gives the teacher's distribution over the top_k subset
     teacher_topk_probs = teacher_topk_probs / (teacher_topk_probs.sum(dim=-1, keepdim=True) + 1e-12)
 
-    # 4. 学生同样只取对应的 top_k 索引位置，再做归一化
+    # 4. The student also takes only the corresponding top_k index positions, then normalizes
     #    shape: [batch_size, seq_len, top_k]
     student_topk_probs = torch.gather(student_probs, dim=-1, index=teacher_topk_indices)
     student_topk_probs = student_topk_probs / (student_topk_probs.sum(dim=-1, keepdim=True) + 1e-12)
 
-    # 5. 计算 KL(Teacher||Student)，只在 top_k 的分布上计算
+    # 5. Calculate KL(Teacher||Student), only calculated on the top_k distribution
     #    KL(P||Q) = sum(P * log(P/Q))
     #    注意需要乘以 temperature^2
     kl = teacher_topk_probs * (
@@ -106,25 +107,34 @@ def compute_topk_kl_loss(teacher_logits, student_logits, temperature=2, top_k=10
 def get_topk_probs(teacher_logits, student_logits, temperature=1.0, top_k=50):
     """
     从教师模型的 logits 中获取概率最高的 top_k token，
+    Get the top_k tokens with the highest probability from the teacher model's logits,
     然后在对应 token 上构造学生的分布（通过 gather）。
+    then construct the student's distribution on the corresponding tokens (via gather).
     返回:
+    Returns:
       teacher_topk_probs, teacher_topk_indices, student_topk_probs
     形状: [batch_size, seq_len, top_k]
+    Shape: [batch_size, seq_len, top_k]
     """
     # 1. 先计算 softmax 概率
+    # 1. First calculate softmax probabilities
     teacher_probs = F.softmax(teacher_logits / temperature, dim=-1)  # [B, L, V]
     student_probs = F.softmax(student_logits / temperature, dim=-1)
 
     # 2. 获取教师最高的 top_k 概率及其索引
+    # 2. Get the teacher's highest top_k probabilities and their indices
     #    shape: [B, L, top_k]
     teacher_topk_probs, teacher_topk_indices = teacher_probs.topk(top_k, dim=-1)  
     
     # 3. 对应地在学生分布中取相同的 token 索引
+    # 3. Correspondingly take the same token indices in the student distribution
     #    shape: [B, L, top_k]
     student_topk_probs = torch.gather(student_probs, dim=-1, index=teacher_topk_indices)
 
     # 4. 在这 top_k 内做归一化，让它们之和为 1
+    # 4. Normalize within these top_k so that their sum is 1
     #    避免除 0，通常加个极小量
+    #    Avoid division by zero, usually add a small epsilon
     teacher_topk_probs = teacher_topk_probs / (teacher_topk_probs.sum(dim=-1, keepdim=True) + 1e-12)
     student_topk_probs = student_topk_probs / (student_topk_probs.sum(dim=-1, keepdim=True) + 1e-12)
 
@@ -137,53 +147,71 @@ def wasserstein_distance_1d(
 ) -> torch.Tensor:
     """
     基于「教师 top_k token 及其 ID」在一维数轴上计算离散 1D Wasserstein 距离。
+    Calculate the discrete 1D Wasserstein distance on a 1D axis based on "teacher top_k tokens and their IDs".
 
     1) 首先对 token ID (teacher_topk_indices) 在最后一维排序，
+    1) First sort the token IDs (teacher_topk_indices) in the last dimension,
     2) 分别累加得到教师CDF、学生CDF，
+    2) Accumulate respectively to get the teacher CDF and student CDF,
     3) 利用梯形法对 |CDF_t(i) - CDF_s(i)| 乘以相邻 token ID 差做积分近似。
+    3) Use the trapezoidal rule to approximate the integral of |CDF_t(i) - CDF_s(i)| multiplied by the difference of adjacent token IDs.
 
     返回标量 (tensor)，表示在 [B, L] 上的平均 Wasserstein 距离。
+    Returns a scalar (tensor), representing the average Wasserstein distance over [B, L].
     """
 
     # 1. 对最后一维 (K) 做排序，得到升序 token_id 以及对应的排序下标
+    # 1. Sort the last dimension (K) to get ascending token_ids and the corresponding sorted indices
     #    shape: [B, L, K] (升序)
+    #    shape: [B, L, K] (ascending)
     sorted_ids, sorted_idx = teacher_topk_indices.sort(dim=-1)
 
     # 2. 根据 sorted_idx 重新排列 teacher 和 student 的概率
+    # 2. Rearrange teacher and student probabilities according to sorted_idx
     #    shape: [B, L, K]
     teacher_probs_sorted = torch.gather(teacher_topk_probs, -1, sorted_idx)
     student_probs_sorted = torch.gather(student_topk_probs, -1, sorted_idx)
 
     # 3. 分别计算 CDF: 即 cumsum
+    # 3. Calculate CDF respectively: i.e., cumsum
     #    shape: [B, L, K]
     teacher_cdf = teacher_probs_sorted.cumsum(dim=-1)
     student_cdf = student_probs_sorted.cumsum(dim=-1)
 
     # 4. 准备做梯形法积分:
+    # 4. Prepare for trapezoidal integration:
     #    W1 ~= sum over j in [0..K-2] of 0.5 * (|CDF_t(j)| + |CDF_t(j+1)|) * ( x_{j+1} - x_j )
     #    但这里 x_j = sorted_ids[..., j]，CDF_t(j) = teacher_cdf[..., j]
+    #    But here x_j = sorted_ids[..., j], CDF_t(j) = teacher_cdf[..., j]
     #    由于是概率分布，CDF >= 0，无需再取绝对值；但 teacher_cdf - student_cdf 要做绝对值.
+    #    Since it's a probability distribution, CDF >= 0, no need for absolute value; but abs(teacher_cdf - student_cdf) is needed.
 
     #    4.1 先取相邻 token id 的差
+    #    4.1 First take the difference of adjacent token ids
     #        shape: [B, L, K-1]
     xj    = sorted_ids[..., :-1].float()
     xj1   = sorted_ids[..., 1:].float()
-    delta = (xj1 - xj)  # 距离
+    delta = (xj1 - xj)  # 距离 # distance
 
     #    4.2 取相邻 CDF 的差，用梯形法
+    #    4.2 Take the difference of adjacent CDFs, use the trapezoidal rule
     cdf_diff       = (teacher_cdf - student_cdf).abs()      # [B, L, K]
     cdf_diff_left  = cdf_diff[..., :-1]                     # [B, L, K-1]
     cdf_diff_right = cdf_diff[..., 1:]                      # [B, L, K-1]
 
     #    4.3 梯形法：0.5 * (f_left + f_right) * delta_x
+    #    4.3 Trapezoidal rule: 0.5 * (f_left + f_right) * delta_x
     #        shape: [B, L, K-1]
     trapezoid_area = 0.5 * (cdf_diff_left + cdf_diff_right) * delta
 
     # 5. 对最后一维 (K-1) 求和，得到每个 [B, L] 的 1D-Wasserstein 距离
+    # 5. Sum over the last dimension (K-1) to get the 1D-Wasserstein distance for each [B, L]
     wdist = trapezoid_area.sum(dim=-1)  # [B, L]
 
     # 6. 在 batch 维度和 seq_len 维度上做平均，以得到最终标量 loss
+    # 6. Average over the batch and seq_len dimensions to get the final scalar loss
     #    当然，你也可以只在 seq_len 上累加，然后在 batch 上取平均，看需求而定
+    #    Of course, you can also just sum over seq_len and then average over the batch, depending on requirements
     wdist_mean = wdist.mean()
 
     return wdist_mean
@@ -195,18 +223,22 @@ def token_level_distill(args, model_data, student_model, teacher_model, critics,
     for _ in range(args.max_input_len - model_data["input_ids"].shape[1]):
 
         # 前向传播：教师和学生模型
+        # Forward pass: Teacher and student models
         with torch.no_grad():
             teacher_output = teacher_model(input_ids=generated_ids, attention_mask=attention_mask, output_hidden_states=True)
         student_output = student_model(input_ids=generated_ids, attention_mask=attention_mask, output_hidden_states=True)
 
         #使用教师logits
+        # Use teacher logits
         teacher_logits = teacher_output.logits
         next_token_logits = teacher_logits[:,-1,:]
         # 学生模型的 logits
+        # Student model's logits
         student_logits = student_output.logits
         student_next_token_logits = student_logits[:, -1, :]
                         
         # 计算 KL loss
+        # Calculate KL loss
         teacher_probs = F.softmax(next_token_logits, dim=-1)
         student_probs = F.log_softmax(student_next_token_logits, dim=-1)
         kl_loss = F.kl_div(student_probs, teacher_probs, reduction='batchmean')
@@ -214,14 +246,17 @@ def token_level_distill(args, model_data, student_model, teacher_model, critics,
         # Top-p + Temperature
         next_token = top_p_sampling(next_token_logits, top_p=0.9, temperature=0.8)
         # 将生成的 token 添加到输入序列
+        # Add the generated token to the input sequence
         next_token = next_token.unsqueeze(1)
         generated_ids = torch.cat([generated_ids, next_token], dim=1)
         #with torch.no_grad():
             # 更新 attention_mask，确保新增的 token 被关注
+            # Update attention_mask to ensure the new token is attended to
         new_attention_mask = torch.ones((attention_mask.size(0), 1), device=attention_mask.device)
         attention_mask = torch.cat([attention_mask, new_attention_mask], dim=1)
 
         # Critic 蒸馏步骤
+        # Critic distillation step
         critic_loss, student_loss = critic_step(
                                 cur_stu_ly=student_layer,
                                 cur_tea_ly=teacher_layer,
@@ -230,12 +265,14 @@ def token_level_distill(args, model_data, student_model, teacher_model, critics,
                                 target=teacher_output,
                                 critics=critics,
                                 critic_optimizer=critic_optimizer,
-                                student_optimizer=student_optimizer,  # 学生模型的 optimizer 放在最后
+                                student_optimizer=student_optimizer,  # 学生模型的 optimizer 放在最后 # Put student model's optimizer last
                                 arg=args
                                 )
         # 将 KL loss 加入到学生模型的 loss 中
+        # Add KL loss to the student model's loss
         total_loss = student_loss +  kl_loss
         # 反向传播和优化学生模型
+        # Backpropagate and optimize the student model
         student_optimizer.zero_grad()
         total_loss.backward()
         student_optimizer.step()
@@ -244,15 +281,20 @@ def token_level_distill(args, model_data, student_model, teacher_model, critics,
         
 def distill_step(epoch, step, args, student_model, student_optimizer, teacher_model, critic_list, optimizer_list, input_ids, attention_mask, labels):
     # 前向传播：教师和学生模型
+    # Forward pass: Teacher and student models
     with torch.no_grad():
         teacher_output = teacher_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True, labels=labels)
     student_output = student_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True, labels=labels)
     teacher_states = teacher_output.hidden_states
     teacher_states = teacher_output.hidden_states[1:] 
-    teacher_states = [teacher_states[(i+1) * 2 -1 ] for i in range(12 // 2)]
-    student_states = student_output.hidden_states
-    student_states = student_output.hidden_states[1:]
-    
+    teacher_states = [teacher_states[(i+1) * args.teacher_n_layer // args.student_n_layer - 1] for i in range(args.student_n_layer)]
+    student_states = student_output.hidden_states[1:] # 从1开始以匹配teacher_states的层数 # Start from 1 to match the number of layers in teacher_states
+
+    # 检查层数是否匹配
+    # Check if the number of layers matches
+    assert len(teacher_states) == len(student_states), \
+        f"Teacher states ({len(teacher_states)}) and student states ({len(student_states)}) lengths mismatch"
+
     # 使用教师 logits，添加 temperature
     
     temperature = 2
@@ -339,24 +381,33 @@ def distill_step(epoch, step, args, student_model, student_optimizer, teacher_mo
 
 def kl_MSE_step(args, student_model, student_optimizer, teacher_model, critic_list, optimizer_list, input_ids, attention_mask, labels):
     # 前向传播：教师和学生模型
+    # Forward pass: Teacher and student models
     with torch.no_grad():
-        teacher_output = teacher_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True, labels=labels)
-    student_output = student_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True, labels=labels)
+        teacher_output = teacher_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
+    student_output = student_model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
     teacher_states = teacher_output.hidden_states
     teacher_states = teacher_output.hidden_states[1:] 
-    teacher_states = [teacher_states[(i+1) * 2 - 1] for i in range(12 // 2)]
-    student_states = student_output.hidden_states
-    student_states = student_output.hidden_states[1:]
+    teacher_states = [teacher_states[(i+1) * args.teacher_n_layer // args.student_n_layer - 1] for i in range(args.student_n_layer)]
+    student_states = student_output.hidden_states[1:] # 从1开始以匹配teacher_states的层数
+                                                       # Start from 1 to match the number of layers in teacher_states
     
     # 使用教师 logits，添加 temperature
-    temperature = 1
+    # Use teacher logits, add temperature
+    temperature = args.temperature
     teacher_logits = teacher_output.logits / temperature
     student_logits = student_output.logits / temperature
 
     # 计算 KL loss
-    teacher_probs = F.softmax(teacher_logits, dim=-1)
-    student_probs = F.log_softmax(student_logits, dim=-1)
-    kl_loss = F.kl_div(student_probs, teacher_probs, reduction='batchmean') * (temperature ** 2)
+    # Calculate KL loss
+    if args.distill_token_loss_type == "KL_top_k":
+        #print("use kl_topk")
+        kl_loss = compute_topk_kl_loss(teacher_logits, student_logits, args.temperature, args.top_k)
+    else:
+        # 使用普通的KL散度损失
+        # Use standard KL divergence loss
+        teacher_probs = F.softmax(teacher_logits, dim=-1)
+        student_probs = F.log_softmax(student_logits, dim=-1)
+        kl_loss = F.kl_div(student_probs, teacher_probs, reduction='batchmean') * (args.temperature ** 2)
     
     # MSE LOSS
     mse = 0
@@ -366,14 +417,15 @@ def kl_MSE_step(args, student_model, student_optimizer, teacher_model, critic_li
     # hard label loss
     hard_loss = student_output.loss
     
-    total_loss = 0.3*mse + 0.3*kl_loss + 0.4*hard_loss
+    total_loss = args.wd_weight * mse + args.kl_weight * kl_loss # mse is treated as student_loss here
         
     # 反向传播和优化学生模型
+    # Backpropagate and optimize the student model
     student_optimizer.zero_grad()
     total_loss.backward()
     student_optimizer.step()
 
-    return hard_loss, None, mse, kl_loss
+    return None, None, mse, kl_loss
 
 
 
@@ -399,11 +451,13 @@ def gradient_penalty(critic, real_data, fake_data):
 
 def critic_step(student_emb, teacher_emb, critic, critic_optimizer, arg):        
     # 开始训练Critic
+    # Start training the Critic
     for _ in range(arg.critic_time):
         teacher_score = critic(teacher_emb)
         student_output_detached = student_emb.detach()
         student_score_critic = critic(student_output_detached)
         # 判别器的损失：最大化教师评分，最小化学生评分
+        # Discriminator loss: Maximize teacher score, minimize student score
         critic_loss = -(torch.mean(teacher_score) - torch.mean(student_score_critic))
         gp = gradient_penalty(critic, teacher_emb, student_output_detached)
         critic_loss += arg.lambda_gp * gp
@@ -411,12 +465,15 @@ def critic_step(student_emb, teacher_emb, critic, critic_optimizer, arg):
         critic_loss.backward()
         critic_optimizer.step()
     # 重新计算 student_score，这次不分离计算图
+    # Recalculate student_score, this time without detaching the computation graph
     student_score = critic(student_emb)
 
     # 学生模型的损失：最小化学生评分
+    # Student model loss: Minimize student score
     student_loss = -torch.mean(student_score)
     
        # 同步做日志用的损失，别破坏原图
+       # Synchronize the loss used for logging, don't break the original graph
     critic_loss_for_logging = critic_loss.detach().clone()
     student_loss_for_logging = student_loss.detach().clone()
 
@@ -431,6 +488,7 @@ def critic_step(student_emb, teacher_emb, critic, critic_optimizer, arg):
         student_loss_avg = student_loss_for_logging.item()
 
     # 最后返回两份：一个给外部backward用，一个仅仅是日志数值
+    # Finally return two parts: one for external backward use, one just for logging values
     return (critic_loss_avg, student_loss_avg), student_loss
     
 
@@ -438,16 +496,19 @@ def critic_step(student_emb, teacher_emb, critic, critic_optimizer, arg):
 def train_step(CFG, schedulars, student_scheduler, test_dataset, data_loader, student_model, teacher_model, tokenizer, critics, optimizers, student_optimizer, num_epochs, device, args):
     # Critic -> compute Wasserstein Distance
     # 设置训练模式
+    # Set training mode
     teacher_model.eval()
     student_model.train()
     for each_critic in critics:
         each_critic.train()    
         
     # 得到需要蒸馏的总层数
+    # Get the total number of layers to be distilled
     n_layers = student_model.module.config.n_layer
     n_layers_teacher = teacher_model.module.config.n_layer
     
     # 开始训练：逐层进行蒸馏
+    # Start training: Distill layer by layer
         
     for epoch in range(num_epochs):              
         data_loader.sampler.set_epoch(epoch)
@@ -465,7 +526,9 @@ def train_step(CFG, schedulars, student_scheduler, test_dataset, data_loader, st
             # --- End dtype info ---
 
             # 初始输入 (复制一份作为生成用，避免修改原数据)
+            # Initial input (copy one for generation to avoid modifying original data)
             # 数据移至 GPU，遍历数据批次
+            # Move data to GPU, iterate through data batches
             #model_data, no_model_data, gen_data = batch
             model_data = batch
             input_ids = model_data["input_ids"].to(device)
@@ -473,12 +536,14 @@ def train_step(CFG, schedulars, student_scheduler, test_dataset, data_loader, st
             labels = model_data["labels"].to(device)
                 
             # 自回归生成/不自回归
+            # Autoregressive generation / Non-autoregressive
             time1 = time.time()
             if CFG.distill_step == "kl_MSE_step":
                 hard_loss, student_loss, critic_loss_container, kl_loss = kl_MSE_step(args, student_model, student_optimizer, teacher_model, critics, optimizers, input_ids, attention_mask, labels)
             else:
                 mse, student_loss, critic_loss_container, kl_loss = distill_step(epoch, step, args, student_model, student_optimizer, teacher_model, critics, optimizers, input_ids, attention_mask, labels)
             # 每 20 步打印一次损失
+            # Print loss every 50 steps
             if dist.get_rank() == 0 and step % 50 == 0:
                 time2 = time.time()
                 epsilon = time2 - time1
@@ -490,6 +555,7 @@ def train_step(CFG, schedulars, student_scheduler, test_dataset, data_loader, st
                     print(f" Epoch [{epoch}/{num_epochs}] | Step [{current_step}/{len(data_loader)}] | Student Loss: {student_loss:.3f} | C1L: {critic_loss_container[0]:.3f}, C2L: {critic_loss_container[1]:.3f}, C3L: {critic_loss_container[2]:.3f}, C4L: {critic_loss_container[3]:.3f}, C5L: {critic_loss_container[4]:.3f}, C6L: {critic_loss_container[5]:.3f}, | Kl loss: {kl_loss:.4f}| Time: {epsilon:.4f}")
                          
             # 每 400 步生成一次示例
+            # Generate an example every 400 steps
             if step % 400 == 0:
                 #t_SNE(student_model, teacher_model, tokenizer, device, step, CFG)
                 ppl = calculate_perplexity(student_model, tokenizer, test_dataset, device)
@@ -506,7 +572,7 @@ def train_step(CFG, schedulars, student_scheduler, test_dataset, data_loader, st
                     # Revert to original saving method (assuming save_student_model was used)
                     # You might need to uncomment/adjust this based on your original code
                     student_save_path = os.path.join(args.base_path if args.base_path else ".", "output", "distillated_student_KL")
-                    os.makedirs(student_save_path, exist_ok=True) #确保目录存在
+                    os.makedirs(student_save_path, exist_ok=True) #确保目录存在 # Ensure directory exists
                     name = 'well-trained'+str(epoch) + str(step) + str(CFG.distill_step)
                     save_student_model(student_model, student_save_path, cur_ly=name)
                     # save_tag = f"epoch{epoch}_step{current_step}_{CFG.distill_step}" # Use double quotes for f-string
@@ -524,9 +590,8 @@ def train_step(CFG, schedulars, student_scheduler, test_dataset, data_loader, st
             print(f"Perplexity on validation set: {ppl}")
                         
             # Revert saving method at the end of epoch
-            if dist.get_rank() == 0:
             student_save_path = os.path.join(args.base_path if args.base_path else ".", "output", "distillated_student_KL")
-            os.makedirs(student_save_path, exist_ok=True) #确保目录存在
+            os.makedirs(student_save_path, exist_ok=True) #确保目录存在 # Ensure directory exists
             name = 'well-trained'+str(epoch) + str(CFG.distill_step)
             save_student_model(student_model, student_save_path, cur_ly=name)
                  # save_tag = f"epoch{epoch}_end_{CFG.distill_step}"
@@ -686,6 +751,7 @@ def t_SNE(student, teacher, tokenizer, device, save_path):
 
 def main():
     # 初始化分布式进程组
+    # Initialize distributed process group
     dist.init_process_group(backend='nccl', init_method='env://')
     args = get_args()
     
@@ -693,17 +759,22 @@ def main():
     device = torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
     
     # 使用 args.base_path 构建相对路径
+    # Build relative path using args.base_path
     base_path = args.base_path if args.base_path else "."
     
     # Initiailize the model as well trained distill gpt2
     teacher_model, tokenizer = getgpt2(device)
     
     # student_model, tokenizer = get_distillgpt2(device) # <-- 取消注释这行，从 distilgpt2 初始化
+    # <-- Uncomment this line to initialize from distilgpt2
     student_model, tokenizer = get_distillgpt2_with_reset(device) #<-- 使用这行替代，如果需要重置层
+    #<-- Use this line instead if layers need to be reset
     
     # student_model = get_student_model(teacher_model, device, args) # <-- 或者如果你想用这个函数初始化
+    # <-- Or if you want to initialize using this function
     
     # 下面这几行注释掉，因为是第一次运行，没有预训练模型可加载
+    # Comment out the lines below, as this is the first run and no pre-trained model is available to load
     # trained_model_path = os.path.join(base_path, "output", "distillated_student_KL", "student_model_well-trained05000distill_step")
     # student_model, tokenizer = get_trained(trained_model_path, device)
     
@@ -717,7 +788,7 @@ def main():
     
     # Restore manual optimizer and scheduler creation HERE
     student_optimizer = optim.AdamW(student_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    student_scheduler = CosineAnnealingLR(student_optimizer, T_max=1000)
+    student_scheduler = CosineAnnealingLR(student_optimizer, T_max=1000) # TODO: Consider setting T_max based on total steps
     
     if dist.get_rank() == 0:
         print("student model -- Check!")
@@ -827,12 +898,12 @@ def main():
     # Use the selected test_dataset for the test instance
     test_dataset = OpenWebTextDataset(dataset=test_dataset_selected,tokenizer=tokenizer,max_length=512) 
     sampler = DistributedSampler(data, shuffle=True) # Sampler should be based on the limited 'data'
-    dataloader = DataLoader(data, batch_size=args.batch_size,  # 从 args 读取 batch size
-                            shuffle=False,  # sampler 存在时必须为 False
+    dataloader = DataLoader(data, batch_size=args.batch_size,  # 从 args 读取 batch size # Read batch size from args
+                            shuffle=False,  # sampler 存在时必须为 False # Must be False when sampler exists
                             sampler=sampler,
-                            num_workers=args.num_workers,  # 从 args 读取 num workers
+                            num_workers=args.num_workers,  # 从 args 读取 num workers # Read num workers from args
                             drop_last=True,
-                            pin_memory=True,  # GPU 训练时启用，提升数据传输效率
+                            pin_memory=True,  # GPU 训练时启用，提升数据传输效率 # Enable for GPU training to improve data transfer efficiency
                             )
     
     
@@ -895,5 +966,6 @@ def main():
     dist.destroy_process_group()
     
     # 探索不同维度的WD蒸馏？？？？？？？？？？？？？？？？？？
+    # Explore WD distillation with different dimensions?????????
 if __name__ == "__main__":
     main()

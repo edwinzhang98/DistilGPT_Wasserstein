@@ -16,6 +16,7 @@ class CNNDMDistillationDataset(Dataset):
         article = sample["article"]
         
         # 将 article 转为模型输入的 token IDs
+        # Convert article to token IDs for model input
         tokenized = self.tokenizer(
             article,
             truncation=True,
@@ -25,11 +26,11 @@ class CNNDMDistillationDataset(Dataset):
         )
         input_ids = tokenized["input_ids"].squeeze(0)
         attention_mask = tokenized["attention_mask"].squeeze(0)
-        labels = input_ids.clone()  # 为了计算损失，将 labels 设置为 input_ids
-        labels[labels == self.tokenizer.pad_token_id] = -100  # 忽略 padding 部分的损失
+        labels = input_ids.clone()  # 为了计算损失，将 labels 设置为 input_ids # Set labels to input_ids for loss calculation
+        labels[labels == self.tokenizer.pad_token_id] = -100  # 忽略 padding 部分的损失 # Ignore loss for padding parts
         
         return {
-            "article": article,  # 返回原始文本
+            "article": article,  # 返回原始文本 # Return original text
             "input_ids": tokenized["input_ids"].squeeze(0),
             "attention_mask": tokenized["attention_mask"].squeeze(0),
             "labels": labels
