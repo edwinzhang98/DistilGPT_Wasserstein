@@ -1,4 +1,4 @@
-# NLP Final Project: DistillGPT2 based on Wasserstein Distance
+# DistillGPT2 based on Wasserstein Distance
 
 This project aims to compare the effects of using Mean Squared Error (MSE) and Wasserstein Distance (WD) as different loss functions for GPT-2 knowledge distillation. The experimental results indicate that using Wasserstein Distance as the loss function allows the model to better learn the data distribution features at each layer.
 
