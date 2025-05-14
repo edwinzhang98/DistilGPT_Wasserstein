@@ -27,8 +27,6 @@ This repository contains the following main parts:
       - Other `.log` files: Logs generated during debugging (on an A100 80G environment).
       - `fig/`: May contain visualization results like T-SNE plots.
     - `archive/`: (Potentially exists) Contains old or archived scripts/notebooks, e.g., `test1.ipynb`.
-- **`Individual-Final-Project-Report/`**: Contains the final individual project report (`Changhong-Zhang-Final-Project.pdf`).
-- **`NLP_Final_Project_Instructions.txt`**: The project instruction document provided by the course.
 
 ## How to Run
 
@@ -49,7 +47,3 @@ After cloning this project to a new environment, please follow these steps to ru
     bash Code/wd_stu_base.sh
     ```
 4.  **Modify Parameters**: To adjust hyperparameters (e.g., learning rate, batch size, model configuration), directly edit the `Code/wd_stu_base.sh` file or the scripts it calls.
-
-## Report
-
-The final individual project report is located in the `Individual-Final-Project-Report/` folder. 
